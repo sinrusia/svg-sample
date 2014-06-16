@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+	<meta charset="utf-8"/>
+	<title>MouseEvent 분석</title>
+	<style type="text/css">
+	body {
+		margin: 5;
+		padding: 0;
+	}
+	
+	#container {
+		margin: 0;
+	}
+	</style>
+</head>
+
+<body>
+
+	<svg id="container01" xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+		<g id="editor">
+			<rect x="100" y="100" width="100" height="50" fill="yellow">
+			</rect>
+			<text x="100" y="100">test</text>
+		</g>
+		<g id="selector">
+			<rect x="100" y="100" width="100" height="50" fill="yellow" style="opacity:0;">
+			</rect>
+		</g>
+
+		
+	</svg>
+	
+	<script type="text/javascript">
+	(function() {
+		
+		var c01 = document.getElementById("editor");
+		
+		var c02 = document.getElementById("selector");
+		
+		
+		c01.addEventListener('mousedown', function(e){
+		
+			console.log("editor - (%s,%s)", e.offsetX, e.offsetY);
+			var offsetX = e.offsetX;
+			var offsetY = e.offsetY;
+			
+			var element = e.toElement;
+			var tagName = element.tagName;
+			
+			if (tagName === 'text') {
+				offsetX += element.getAttributeNS(null, 'x')*1;
+				offsetY += element.getAttributeNS(null, 'y')*1;
+				
+			}
+			console.log("editor - (%s,%s)", offsetX, offsetY);
+		});
+		
+		c02.addEventListener('mousedown', function(e){
+			console.log("selector - (%s,%s)", e.offsetX, e.offsetY);
+			var element = e.toElement;
+			console.log('(%s,%s)', element.getAttributeNS(null, 'x'), element.getAttributeNS(null, 'y'));
+		});
+		
+		
+	})();
+	</script>
+</body>
+</head>

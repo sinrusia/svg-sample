@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+	<head>
+	<style >
+	
+	
+		.first {
+			background: #cb3434;
+			width: 100px;
+			height: 100px;
+		}
+		.second {
+			background: #3c26c9;
+			width: 200px;
+			height: 200px;
+		}
+	</style>
+	
+	
+	<script type="text/javascript">
+	window.addEventListener("load", function(){
+		
+		var first = document.getElementsByClassName("first")[0];
+		first.addEventListener("click", function() {
+			alert("active event");
+		});
+	});
+	function move() {
+		var first = document.getElementsByClassName("first")[0];
+		var second = document.getElementsByClassName("second")[0];
+		second.appendChild(first);
+	}
+	
+	</script>
+	
+	</head>
+	
+	<body>
+	<div id="container">
+	
+	<div class="first">
+	xxxxx
+	</div>
+	
+	<div class="second">
+	yyyyy
+	</div>
+	
+	<button onclick="move()"/>
+	
+	</div>
+	
+	</body>
+</html>

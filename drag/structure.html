@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>시스템,네트워크 구성도</title>
+<style type="text/css">
+body {
+	margin: 5px;
+	
+}
+
+div {
+	padding: 5px;
+	width: 601px;
+	height: 401px;
+}
+
+div #editor-bg {
+	position: relative;
+	margin: 0;
+	padding: 0;
+	width: 601px;
+	height: 401px;
+	background: url('images/grid.gif');
+	
+}
+
+svg {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+}
+
+text {
+	display: block;
+	cursor: default;
+}
+line {
+	stroke: #000;
+}
+</style>
+</head>
+<body>
+
+<div id="editor">
+	<div id="editor-bg">
+	</div>
+</div>
+
+<script type="text/javascript">
+
+window.addEventListener("load", windowloadhandler);
+
+var container;
+
+var contentArea;
+
+var selectArea;
+
+var uri = "http://www.w3.org/2000/svg"; // svg namespace
+
+// 로드완료시 svg 컴포넌트 생성.
+function windowloadhandler() {
+	console.log("window loaded");
+	
+	// create svg document
+	container = document.createElementNS(uri, 'svg');
+	container.setAttributeNS(null, 'width', 600);
+	container.setAttributeNS(null, 'height', 400);
+	container.setAttributeNS(null, 'x', 0);
+	container.setAttributeNS(null, 'y', 0);
+	container.setAttributeNS(null, 'viewBox', '0 0 600 400');
+	container.setAttributeNS(uri,'version','1.1');
+	var editor = document.getElementById("editor");
+	editor.appendChild(container);
+	
+	// create cotent group
+	contentArea = document.createElementNS(uri, 'g');
+	container.appendChild(contentArea);
+	
+	// create select group
+	selectArea = document.createElementNS(uri, 'g');
+	container.appendChild(selectArea);
+	
+	
+	start();
+}
+
+
+function start() {
+	// structure tree
+	var systemTree = [
+		{
+		name:'host1',
+		ip:'1.1.1.1',
+		children:[
+			{
+				name:'child1',
+				ip:'2.1.1.1'
+			},
+			{
+				name:'child2',
+				ip:'2.1,1.2'
+			},
+			{
+				name:'child3',
+				ip:'2.1.1.3'
+			},
+			{
+				name:'child4',
+				ip:'2.1.1.3'
+			},
+			{
+				name:'child42',
+				ip:'2.1,1.2'
+			},
+			{
+				name:'child5',
+				ip:'2.1.1.3'
+			},
+			{
+				name:'child6',
+				ip:'2.1.1.3'
+			}
+		]}
+	];
+	
+	var svgDocument = document.getElementById("container");
+	
+	// start render
+	
+	//=========
+	function render() {
+		
+		// 배치를 어떻게 할 것인지 계산해야 한다.
+		// 그룹을 먼저 배치하고 자식 노드의 개수에 따라서 일정 간격으 배치 각을 생성한다.
+		var groupLength = systemTree.length;
+		
+		for (var i = 0; i < groupLength; i++) {
+			var groupItem = systemTree[i];
+			var parentCX = container.getAttributeNS(null, 'width') / 2;
+			var parentCY = container.getAttributeNS(null, 'height') / 2;
+			var x = parentCX - (50 / 2);
+			var y = parentCY - (25 / 2);
+			
+			var group = document.createElementNS(uri, 'g');
+			
+			group.addEventListener('mouseover', mouseoverHandler);
+			group.addEventListener('mouseout', mouseoutHandler);
+			group.addEventListener('mousedown', mousedownHandler);
+			
+			group.setAttributeNS(null, 'id', 'group1');
+			
+			var rect = createRect(x,y,50,25);
+			var text = createText(x,y,groupItem.name);
+			
+			group.appendChild(rect);
+			group.appendChild(text);
+			
+			container.appendChild(group);
+			
+			if(Array.isArray(groupItem.children)){
+				var children = groupItem.children;
+				var distance = 100;
+				var dig = 360 / children.length;
+				var currentdig = 0;
+				for (var j = 0; j < children.length; j++){
+					var child = children[j];
+					var rad = currentdig * Math.PI / 180;
+					var id = 'level' + j;
+					
+					var childX = parentCX + (Math.cos(rad) * distance);
+					var childY = parentCY + (Math.sin(rad) * distance);
+					
+					var childRect = createRect(childX - 50 / 2,childY - 25 / 2,50,25);
+					var childText = createText(childX - 50 / 2,childY - 25 / 2,child.name);
+					//console.log('text size %s, %s', childText.getAttributeNS(null, 'width'), childText.getAttributeNS(null, 'height'));
+					childText.addEventListener('SVGLoad', textLoadHandler);
+					childText.onload = function() {
+						console.log(this);
+					}
+					var childGroup = document.createElementNS(uri, 'g');
+					childGroup.setAttributeNS(null, 'id', id);
+					//childGroup.setAttributeNS(null, "fill", 'white');
+					childGroup.appendChild(childRect);
+					childGroup.appendChild(childText);
+					container.appendChild(childGroup);
+					
+					
+					var line = createLine(parentCX,parentCY,childX,childY)
+					line.fromComp = 'group1';
+					line.toComp = id;
+					container.insertBefore(line, group);
+					
+					currentdig += dig;
+					
+				}
+			}
+		}
+	}
+	
+	// 컴포넌트에 마우스가 오버되면 오버된 표시를 해준다.
+	function mouseoverHandler(e) {
+		//removeAllChild(selectArea);
+		
+		var g = e.target.parentNode;
+		var childs = g.childNodes;
+		var gx = 999999, 
+			gy = 999999, 
+			gwidth = 0, 
+			gheight = 0;
+		var children = childs.length;
+		for (var i = 0; i < children; i++) {
+			var child = childs[i];
+			gx = Math.min(gx, child.getAttributeNS(null, 'x'));
+			gy = Math.min(gy, child.getAttributeNS(null, 'y'));
+			gwidth = Math.max(gwidth, child.getAttributeNS(null, 'width'));
+			gheight = Math.max(gheight, child.getAttributeNS(null, 'height'));
+		}
+		
+		console.log('x=%s,y=%s,width=%s,height=%s', gx, gy, gwidth, gheight);
+		
+		var rect = createRect(gx, gy, gwidth, gheight);
+		rect.setAttributeNS(null, 'fill', 'none');
+		rect.setAttributeNS(null, 'stroke-width', '1px');
+		rect.setAttributeNS(null, 'stroke', '#ff00ff');
+		selectArea.appendChild(rect);
+	}
+	
+	function mouseoutHandler(e) {
+		console.log('mouse-out');
+		removeAllChild(selectArea);
+	}
+	
+	function mousedownHandler(e) {
+		e = !e ? window.event : e;
+		console.log(e);
+		console.log('(%s,%s)', e.offsetX, e.offsetY);
+		removeAllChild(selectArea);
+		
+				var g = e.target.parentNode;
+		var childs = g.childNodes;
+		var gx = 999999, 
+			gy = 999999, 
+			gwidth = 0, 
+			gheight = 0;
+		var children = childs.length;
+		for (var i = 0; i < children; i++) {
+			var child = childs[i];
+			gx = Math.min(gx, child.getAttributeNS(null, 'x'));
+			gy = Math.min(gy, child.getAttributeNS(null, 'y'));
+			gwidth = Math.max(gwidth, child.getAttributeNS(null, 'width'));
+			gheight = Math.max(gheight, child.getAttributeNS(null, 'height'));
+		}
+		
+		console.log('x=%s,y=%s,width=%s,height=%s', gx, gy, gwidth, gheight);
+		
+		var rect = createRect(gx, gy, gwidth, gheight);
+		rect.setAttributeNS(null, 'fill', 'none');
+		rect.setAttributeNS(null, 'stroke-width', 3);
+		rect.setAttributeNS(null, 'stroke', '#ffff00');
+		selectArea.appendChild(rect);
+		
+		container.addEventListener('mousemove', mousemoveHandler);
+		container.addEventListener('mouseup', mouseupHandler);
+		
+		startX = e.offsetX == undefined ? e.layerX : e.offsetX;
+		startY = e.offsetY == undefined ? e.layerY : e.offsetY;
+		
+		var element = e.toElement === undefined ? e.rangeParent : e.toElement;
+		var tagName = element.tagName === undefined ? element.nodeName : element.tagName;
+		tagName.replace('#', '');
+		
+		if(tagName === 'text') {
+		
+			startX += element.getAttributeNS(null, 'x')*1;
+			startY += element.getAttributeNS(null, 'y')*1 - 20;
+		}
+		
+		ofX = startX - gx;
+		ofY = startY - gy;
+
+		console.log('offset(%s,%s)', ofX, ofY);
+	}
+	
+	var startX, startY;
+	var ofX, ofY;
+	var moveX, moveY;
+	
+	function mousemoveHandler(e) {
+		removeAllChild(selectArea);
+		//
+		var curX = e.offsetX === undefined ? e.layerX : e.offsetX;
+		curX = curX - ofX;
+		var curY = e.offsetY === undefined ? e.layerY : e.offsetY;
+		curY = curY - ofY;
+		
+		var mx = (startX - curX);
+		var my = (startY - curY);
+		
+		curX = calc10Pos(curX);
+		curY = calc10Pos(curY);
+		
+		var rect = createRect(curX,curY,50,25);
+		rect.setAttributeNS(null, 'style', 'stroke-dasharray:3,3; stroke:black; fill:none')
+		
+		selectArea.appendChild(rect);
+		
+		moveX = curX;
+		moveY = curY;
+		
+	}
+	
+	
+	function mouseupHandler(e) {
+		var groupItem = document.getElementById('group1');
+		
+		var childrens = groupItem.childNodes;
+		
+		console.log(groupItem.childNodes);
+		
+		var childLength = childrens.length;
+		
+		for (var i = 0; i < childLength; i++) {
+			var element = childrens[i];
+			element.setAttributeNS(null, 'x', moveX);
+			element.setAttributeNS(null, 'y', moveY);
+			if (element.tagName === 'text') {
+				element.setAttributeNS(null, 'y', moveY + 20);
+			} else {
+				element.setAttributeNS(null, 'y', moveY);
+			}
+		}
+	
+		container.removeEventListener('mousemove', mousemoveHandler);
+		container.removeEventListener('mouseup', mouseupHandler);
+		
+		updateLine();
+	}
+	
+	function removeAllChild(p) {
+		var childs = p.childNodes;
+		if(childs.length > 0) {
+			var i = childs.length - 1;
+			while (i >= 0) {
+				p.removeChild(childs[i]);
+				i =- 1
+			}
+		}
+	}
+	
+	// 
+	function textLoadHandler(e) {
+		console.log('load');
+		e.target;
+		e.currentTarget;
+	}
+	
+	// 사각형 컴포넌트 생성하는 함수
+	function createRect(x,y,width,height) {
+		var rect = document.createElementNS(uri, 'rect');
+		rect.setAttributeNS(null, "x", x);
+		rect.setAttributeNS(null, "y", y);
+		rect.setAttributeNS(null, "width", width);
+		rect.setAttributeNS(null, "height", height);
+		rect.setAttributeNS(null, "fill", 'red');
+		return rect;
+	}
+	
+	// 문자 컴포넌트 생성하는 함수
+	function createText(x,y, textData) {
+		var text = document.createElementNS(uri, 'text');
+		var data = document.createTextNode(textData);
+		text.setAttributeNS(null, "x", x);
+		text.setAttributeNS(null, "y", y + 20);
+		text.appendChild(data);
+		return text;
+	}
+	
+	// 라인 생성하는 함수
+	function createLine(sx,sy,ex,ey) {
+		var line = document.createElementNS(uri, 'line');
+		line.setAttributeNS(null, 'x1', sx);
+		line.setAttributeNS(null, 'y1', sy);
+		line.setAttributeNS(null, 'x2', ex);
+		line.setAttributeNS(null, 'y2', ey);
+		return line;
+	}
+	
+	// 10단위 근사치 값 가져오기
+	function calc10Pos(value) {
+		var extra = value % 10;
+		if ( extra < 6) {
+			return value - extra;
+		}
+		return value - extra + 10;
+	}
+	
+	function updateLine() {
+		var childs = container.childNodes;
+		var childLength = childs.length;
+		var groupid = 'group1';
+		
+		for(var i = 0; i < childLength; i++) {
+			var element = childs[i];
+			if (element.tagName === 'line') {
+				if(element.fromComp === groupid || element.toComp === groupid) {
+					var fId = element.fromComp;
+					var tId = element.toComp;
+					
+					var fComp = document.getElementById(fId);
+					var tComp = document.getElementById(tId);
+					
+					var sp = getCenterPoint(fComp);
+					var ep = getCenterPoint(tComp);
+					
+					element.setAttributeNS(null, 'x1', sp.x);
+					element.setAttributeNS(null, 'y1', sp.y);
+					
+					element.setAttributeNS(null, 'x2', ep.x);
+					element.setAttributeNS(null, 'y2', ep.y)
+					
+					
+					
+				}
+				
+			}
+		}
+	}
+	
+	
+	function getCenterPoint(element) {
+		var gx = 999999, 
+			gy = 999999, 
+			gwidth = 0, 
+			gheight = 0;
+		
+		var childs = element.childNodes;
+		var childLength = childs.length;
+		for (var i = 0; i < childLength; i++) {
+			var child = childs[i];
+			gx = Math.min(gx, child.getAttributeNS(null, 'x'));
+			gy = Math.min(gy, child.getAttributeNS(null, 'y'));
+			gwidth = Math.max(gwidth, child.getAttributeNS(null, 'width'));
+			gheight = Math.max(gheight, child.getAttributeNS(null, 'height'));
+		}
+		
+		return {x:gx + (gwidth / 2),y:gy + (gheight / 2)};
+	}
+	
+	function getElementSize(element) {
+		var temp = {};
+		if (Array.isArray(element)) {
+			
+		} else if (element.nodeName === 'g') {
+			
+		} else {
+			
+		}
+	}
+
+	
+	render();
+}
+
+</script>
+</body>
+</html>
